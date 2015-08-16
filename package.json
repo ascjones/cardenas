@@ -1,0 +1,10 @@
+{
+  "name": "cardenas",
+  "version": "0.0.1",
+  "description": "",
+  "author": "Andrew Jones",
+  "license": "ISC",
+  "dependencies": {
+    "virtual-dom": "^2.1.1"
+  }
+}
