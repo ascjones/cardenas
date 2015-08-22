@@ -24,9 +24,9 @@ initialState :: State
 initialState = { monthlyRent: 0.0, propertyPrice: 0.0, grossYield: 0.0 }
 
 calculateYield :: Number -> Number -> Number
-calculateYield monthlyRent propertyPrice = monthlyRent * 12.0 / propertyPrice * 100.0 
+calculateYield monthlyRent propertyPrice = monthlyRent * 12.0 / propertyPrice * 100.0
 
-data Input a 
+data Input a
     = UpdateMonthlyRent String a
     | UpdatePropertyPrice String a
 
@@ -35,18 +35,24 @@ ui = component render eval
     where
 
     render :: Render State Input p
-    render st = H.div_
-        [ H.input [ P.type_ "text"
-                  , P.placeholder "Monthly Rent"
-                  , P.value $ show st.monthlyRent
-                  , E.onValueChange (E.input UpdateMonthlyRent)
-                  ]
-        , H.input [ P.type_ "text"
-                  , P.placeholder "Property Price"
-                  , P.value $ show st.propertyPrice
-                  , E.onValueChange (E.input UpdatePropertyPrice)
-                  ]
-        ]
+    render st =
+      H.div_  [ H.h1_ [ H.text "Yield Calculator" ]
+              , H.p_  [ H.text "Rent (monthly)"
+                      , H.input [ P.type_ "text"
+                                , P.placeholder "Monthly Rent"
+                                , P.value $ show st.monthlyRent
+                                , E.onValueChange (E.input UpdateMonthlyRent)
+                                ]
+                      ]
+              , H.p_  [ H.text "Property Value"
+                      , H.input [ P.type_ "text"
+                                , P.placeholder "Property Price"
+                                , P.value $ show st.propertyPrice
+                                , E.onValueChange (E.input UpdatePropertyPrice)
+                                ]
+                      ]
+              , H.p_ [ H.text (show st.grossYield) ]
+              ]
 
     eval :: Eval Input State Input g
     eval (UpdateMonthlyRent rent next) = modify (\st -> recalcWithRent st $ readFloat rent) $> next
@@ -56,10 +62,9 @@ ui = component render eval
     recalcWithRent st rent = { monthlyRent: rent, propertyPrice: st.propertyPrice,  grossYield: calculateYield rent st.propertyPrice }
 
     recalcWithPrice :: State -> Number -> State
-    recalcWithPrice st price = { monthlyRent: st.monthlyRent, propertyPrice: price, grossYield: calculateYield st.monthlyRent price } 
+    recalcWithPrice st price = { monthlyRent: st.monthlyRent, propertyPrice: price, grossYield: calculateYield st.monthlyRent price }
 
 main :: Eff (HalogenEffects ()) Unit
 main = runAff throwException (const (pure unit)) $ do
     app <- runUI ui initialState
     appendToBody app.node
-
