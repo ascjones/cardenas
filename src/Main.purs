@@ -18,13 +18,13 @@ import qualified Halogen.HTML.Properties as P
 import qualified Halogen.HTML.Events as E
 import qualified Halogen.HTML.Events.Forms as E
 
-type State = { monthlyRent :: Number, propertyPrice :: Number, grossYield :: Number, deposit :: Number }
+type State = { monthlyRent :: Number, propertyPrice :: Number, deposit :: Number }
 
 initialState :: State
-initialState = { monthlyRent: 0.0, propertyPrice: 0.0, grossYield: 0.0, deposit: 0.0 }
+initialState = { monthlyRent: 0.0, propertyPrice: 0.0, deposit: 0.0 }
 
-calculateYield :: Number -> Number -> Number
-calculateYield monthlyRent propertyPrice = monthlyRent * 12.0 / propertyPrice * 100.0
+calculateYield :: State -> Number
+calculateYield st =  st.monthlyRent * 12.0 / st.propertyPrice * 100.0
 
 calculateLTV :: State -> Number
 calculateLTV st = (st.propertyPrice - st.deposit) / st.propertyPrice * 100.0
@@ -62,23 +62,15 @@ ui = component render eval
                                 , E.onValueChange (E.input UpdateDeposit)
                                 ]
                       ]
-              , H.table_  [ H.tr_ [ H.td_ [H.text "Gross Yield"], H.td_ [ H.text (show st.grossYield) ] ]
+              , H.table_  [ H.tr_ [ H.td_ [H.text "Gross Yield"], H.td_ [ H.text (show $ calculateYield st) ] ]
                           , H.tr_ [ H.td_ [H.text "Loan to Value"], H.td_ [ H.text (show $ calculateLTV st) ] ]
                           ]
               ]
 
     eval :: Eval Input State Input g
-    eval (UpdateMonthlyRent rent next) = do
-      let rent' = readFloat rent
-      propertyPrice <- gets (\st -> st.propertyPrice)
-      modify (_ { monthlyRent = rent', grossYield = calculateYield rent' propertyPrice })
-      return next
-    eval (UpdatePropertyValue price next) = do
-      let price' = readFloat price -- modify (\st -> recalcWithPrice st $ readFloat price) $> next
-      rent <- gets \st -> st.monthlyRent
-      modify (_ { propertyPrice = price', grossYield = calculateYield rent price' })
-      return next
-    eval (UpdateDeposit deposit next) = modify (_ { deposit = readFloat deposit }) $> next
+    eval (UpdateMonthlyRent rent next)    = modify (_ { monthlyRent = readFloat rent }) $> next
+    eval (UpdatePropertyValue price next) = modify (_ { propertyPrice = readFloat price }) $> next
+    eval (UpdateDeposit deposit next)     = modify (_ { deposit = readFloat deposit }) $> next
 
 main :: Eff (HalogenEffects ()) Unit
 main = runAff throwException (const (pure unit)) $ do
