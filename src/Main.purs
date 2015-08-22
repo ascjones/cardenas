@@ -27,8 +27,9 @@ calculateYield :: Number -> Number -> Number
 calculateYield monthlyRent propertyPrice = monthlyRent * 12.0 / propertyPrice * 100.0
 
 data Input a
-    = UpdateMonthlyRent String a
-    | UpdatePropertyPrice String a
+  = UpdatePropertyValue String a
+  | UpdateMonthlyRent String a
+
 
 ui :: forall g p. (Functor g) => Component State Input g p
 ui = component render eval
@@ -37,6 +38,13 @@ ui = component render eval
     render :: Render State Input p
     render st =
       H.div_  [ H.h1_ [ H.text "Yield Calculator" ]
+              , H.p_  [ H.text "Property Value"
+                      , H.input [ P.type_ "text"
+                                , P.placeholder "Property Price"
+                                , P.value $ show st.propertyPrice
+                                , E.onValueChange (E.input UpdatePropertyValue)
+                                ]
+                      ]
               , H.p_  [ H.text "Rent (monthly)"
                       , H.input [ P.type_ "text"
                                 , P.placeholder "Monthly Rent"
@@ -44,19 +52,12 @@ ui = component render eval
                                 , E.onValueChange (E.input UpdateMonthlyRent)
                                 ]
                       ]
-              , H.p_  [ H.text "Property Value"
-                      , H.input [ P.type_ "text"
-                                , P.placeholder "Property Price"
-                                , P.value $ show st.propertyPrice
-                                , E.onValueChange (E.input UpdatePropertyPrice)
-                                ]
-                      ]
               , H.p_ [ H.text (show st.grossYield) ]
               ]
 
     eval :: Eval Input State Input g
     eval (UpdateMonthlyRent rent next) = modify (\st -> recalcWithRent st $ readFloat rent) $> next
-    eval (UpdatePropertyPrice price next) = modify (\st -> recalcWithPrice st $ readFloat price) $> next
+    eval (UpdatePropertyValue price next) = modify (\st -> recalcWithPrice st $ readFloat price) $> next
 
     recalcWithRent :: State -> Number -> State
     recalcWithRent st rent = { monthlyRent: rent, propertyPrice: st.propertyPrice,  grossYield: calculateYield rent st.propertyPrice }
