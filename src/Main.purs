@@ -11,7 +11,7 @@ import Control.Monad.Eff.Exception (throwException)
 import Data.Functor (($>))
 
 import Halogen
-import Halogen.Query.StateF (modify)
+import Halogen.Query.StateF (modify, gets)
 import Halogen.Util (appendToBody)
 import qualified Halogen.HTML as H
 import qualified Halogen.HTML.Properties as P
@@ -56,7 +56,11 @@ ui = component render eval
               ]
 
     eval :: Eval Input State Input g
-    eval (UpdateMonthlyRent rent next) = modify (\st -> recalcWithRent st $ readFloat rent) $> next
+    eval (UpdateMonthlyRent rent next) = do
+      let rent' = readFloat rent
+      propertyPrice <- gets (\st -> st.propertyPrice)
+      modify (_ { monthlyRent = rent', grossYield = calculateYield rent' propertyPrice })
+      return next
     eval (UpdatePropertyValue price next) = modify (\st -> recalcWithPrice st $ readFloat price) $> next
 
     recalcWithRent :: State -> Number -> State
