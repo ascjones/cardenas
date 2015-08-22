@@ -47,7 +47,7 @@ ui = component render eval
                       ]
               , H.p_  [ H.text "Rent (monthly)"
                       , H.input [ P.type_ "text"
-                                , P.placeholder "Monthly Rent"
+                              , P.placeholder "Monthly Rent"
                                 , P.value $ show st.monthlyRent
                                 , E.onValueChange (E.input UpdateMonthlyRent)
                                 ]
@@ -61,13 +61,11 @@ ui = component render eval
       propertyPrice <- gets (\st -> st.propertyPrice)
       modify (_ { monthlyRent = rent', grossYield = calculateYield rent' propertyPrice })
       return next
-    eval (UpdatePropertyValue price next) = modify (\st -> recalcWithPrice st $ readFloat price) $> next
-
-    recalcWithRent :: State -> Number -> State
-    recalcWithRent st rent = { monthlyRent: rent, propertyPrice: st.propertyPrice,  grossYield: calculateYield rent st.propertyPrice }
-
-    recalcWithPrice :: State -> Number -> State
-    recalcWithPrice st price = { monthlyRent: st.monthlyRent, propertyPrice: price, grossYield: calculateYield st.monthlyRent price }
+    eval (UpdatePropertyValue price next) = do
+      let price' = readFloat price -- modify (\st -> recalcWithPrice st $ readFloat price) $> next
+      rent <- gets \st -> st.monthlyRent
+      modify (_ { propertyPrice = price', grossYield = calculateYield rent price' })
+      return next
 
 main :: Eff (HalogenEffects ()) Unit
 main = runAff throwException (const (pure unit)) $ do
