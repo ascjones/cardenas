@@ -52,7 +52,8 @@ ui = component render eval
                                 , E.onValueChange (E.input UpdateMonthlyRent)
                                 ]
                       ]
-              , H.p_ [ H.text (show st.grossYield) ]
+              , H.table_  [ H.tr_ [ H.td_ [H.text "Gross Yield"], H.td_ [ H.text (show st.grossYield) ] ]
+                          ]
               ]
 
     eval :: Eval Input State Input g
