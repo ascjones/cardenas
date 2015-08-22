@@ -2,3 +2,5 @@ bower_components
 output
 .psci*
 node_modules
+dist/*.js
+.browserify-cache.json
