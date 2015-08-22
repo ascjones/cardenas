@@ -18,18 +18,21 @@ import qualified Halogen.HTML.Properties as P
 import qualified Halogen.HTML.Events as E
 import qualified Halogen.HTML.Events.Forms as E
 
-type State = { monthlyRent :: Number, propertyPrice :: Number, grossYield :: Number }
+type State = { monthlyRent :: Number, propertyPrice :: Number, grossYield :: Number, deposit :: Number }
 
 initialState :: State
-initialState = { monthlyRent: 0.0, propertyPrice: 0.0, grossYield: 0.0 }
+initialState = { monthlyRent: 0.0, propertyPrice: 0.0, grossYield: 0.0, deposit: 0.0 }
 
 calculateYield :: Number -> Number -> Number
 calculateYield monthlyRent propertyPrice = monthlyRent * 12.0 / propertyPrice * 100.0
 
+calculateLTV :: State -> Number
+calculateLTV st = (st.propertyPrice - st.deposit) / st.propertyPrice * 100.0
+
 data Input a
   = UpdatePropertyValue String a
   | UpdateMonthlyRent String a
-
+  | UpdateDeposit String a
 
 ui :: forall g p. (Functor g) => Component State Input g p
 ui = component render eval
@@ -47,12 +50,20 @@ ui = component render eval
                       ]
               , H.p_  [ H.text "Rent (monthly)"
                       , H.input [ P.type_ "text"
-                              , P.placeholder "Monthly Rent"
+                                , P.placeholder "Monthly Rent"
                                 , P.value $ show st.monthlyRent
                                 , E.onValueChange (E.input UpdateMonthlyRent)
                                 ]
                       ]
+              , H.p_  [ H.text "Deposit"
+                      , H.input [ P.type_ "text"
+                                , P.placeholder "Deposit"
+                                , P.value $ show st.deposit
+                                , E.onValueChange (E.input UpdateDeposit)
+                                ]
+                      ]
               , H.table_  [ H.tr_ [ H.td_ [H.text "Gross Yield"], H.td_ [ H.text (show st.grossYield) ] ]
+                          , H.tr_ [ H.td_ [H.text "Loan to Value"], H.td_ [ H.text (show $ calculateLTV st) ] ]
                           ]
               ]
 
@@ -67,6 +78,7 @@ ui = component render eval
       rent <- gets \st -> st.monthlyRent
       modify (_ { propertyPrice = price', grossYield = calculateYield rent price' })
       return next
+    eval (UpdateDeposit deposit next) = modify (_ { deposit = readFloat deposit }) $> next
 
 main :: Eff (HalogenEffects ()) Unit
 main = runAff throwException (const (pure unit)) $ do
