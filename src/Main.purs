@@ -48,7 +48,7 @@ ui = component render eval
     render :: Render State Input p
     render st =
       H.div_  [ H.h1_ [ H.text "Yield Calculator" ]
-              , H.ol_ [ H.li_ [ H.label_ [ H.text  "Property Value" ]
+              , H.ol_ [ H.li_ [ H.label [ P.for "propertyValue" ] [ H.text  "Property Value" ]
                               , H.input [ P.id_ "propertyValue"
                                         , P.type_ "text"
                                         , P.placeholder "Property Price"
@@ -56,7 +56,7 @@ ui = component render eval
                                         , E.onValueChange (E.input UpdatePropertyValue)
                                         ]
                               ]
-                      , H.li_ [ H.label_ [ H.text  "Rent (Monthly)" ]
+                      , H.li_ [ H.label [ P.for "monthlyRent" ][ H.text  "Rent (Monthly)" ]
                               , H.input [ P.id_ "monthlyRent"
                                         , P.type_ "text"
                                         , P.placeholder "Monthly Rent"
@@ -64,7 +64,7 @@ ui = component render eval
                                         , E.onValueChange (E.input UpdateMonthlyRent)
                                         ]
                               ]
-                      , H.li_ [ H.label_ [ H.text  "Deposit" ]
+                      , H.li_ [ H.label [ P.for "deposit" ] [ H.text  "Deposit" ]
                               , H.input [ P.id_ "deposit"
                                         , P.type_ "text"
                                         , P.placeholder "Deposit"
