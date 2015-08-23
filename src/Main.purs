@@ -19,10 +19,10 @@ import qualified Halogen.HTML.Properties as P
 import qualified Halogen.HTML.Events as E
 import qualified Halogen.HTML.Events.Forms as E
 
-type State = { monthlyRent :: Maybe Number, propertyValue :: Maybe Number, deposit :: Maybe Number }
+type State = { monthlyRent :: Maybe Number, propertyValue :: Maybe Number, deposit :: Maybe Number, interestRate :: Maybe Number }
 
 initialState :: State
-initialState = { monthlyRent: Nothing, propertyValue: Nothing, deposit: Nothing }
+initialState = { monthlyRent: Nothing, propertyValue: Nothing, deposit: Nothing, interestRate: Nothing }
 
 calculateYield :: State -> Maybe Number
 calculateYield st = do
@@ -36,10 +36,18 @@ calculateLTV st = do
   deposit <- st.deposit
   return $ (propertyValue - deposit) / propertyValue * 100.0
 
+calculateMonthlyMortgagePayment :: State -> Maybe Number
+calculateMonthlyMortgagePayment st = do
+  propertyValue <- st.propertyValue
+  interestRate <- st.interestRate
+  deposit <- st.deposit
+  return $ (propertyValue - deposit) * (interestRate / 100.0) / 12.0
+
 data Input a
   = UpdatePropertyValue String a
   | UpdateMonthlyRent String a
   | UpdateDeposit String a
+  | UpdateMortgageInterestRate String a
 
 ui :: forall g p. (Functor g) => Component State Input g p
 ui = component render eval
@@ -47,7 +55,7 @@ ui = component render eval
 
     render :: Render State Input p
     render st =
-      H.div_  [ H.h1_ [ H.text "Yield Calculator" ]
+      H.div_  [ H.h1_ [ H.text "Mortgage Calculator" ]
               , H.ol_ [ H.li_ [ H.label [ P.for "propertyValue" ] [ H.text  "Property Value" ]
                               , H.input [ P.id_ "propertyValue"
                                         , P.type_ "text"
@@ -72,9 +80,18 @@ ui = component render eval
                                         , E.onValueChange (E.input UpdateDeposit)
                                         ]
                               ]
+                      , H.li_ [ H.label [ P.for "interestRate" ] [ H.text  "Mortgage Interest Rate" ]
+                              , H.input [ P.id_ "interestRate"
+                                        , P.type_ "text"
+                                        , P.placeholder "Mortgage Interest Rate"
+                                        , P.value $ showNumber st.interestRate
+                                        , E.onValueChange (E.input UpdateMortgageInterestRate)
+                                        ]
+                              ]
                       ]
               , H.table_  [ H.tr_ [ H.td_ [H.text "Gross Yield"], H.td_ [ H.text (showNumber $ calculateYield st) ] ]
                           , H.tr_ [ H.td_ [H.text "Loan to Value"], H.td_ [ H.text (showNumber $ calculateLTV st) ] ]
+                          , H.tr_ [ H.td_ [H.text "Monthly Mortgage Payment"], H.td_ [ H.text (showNumber $ calculateMonthlyMortgagePayment st) ] ]
                           ]
               ]
 
@@ -86,6 +103,7 @@ ui = component render eval
     eval (UpdateMonthlyRent rent next)    = modify (_ { monthlyRent = Just $ readFloat rent }) $> next
     eval (UpdatePropertyValue price next) = modify (_ { propertyValue = Just $ readFloat price }) $> next
     eval (UpdateDeposit deposit next)     = modify (_ { deposit = Just $ readFloat deposit }) $> next
+    eval (UpdateMortgageInterestRate interestRate next) = modify (_ { interestRate = Just $ readFloat interestRate }) $> next
 
 main :: Eff (HalogenEffects ()) Unit
 main = runAff throwException (const (pure unit)) $ do
