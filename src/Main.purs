@@ -52,7 +52,7 @@ ui = component render eval
                               , H.input [ P.id_ "propertyValue"
                                         , P.type_ "text"
                                         , P.placeholder "Property Price"
-                                        , P.value $ show st.propertyValue
+                                        , P.value $ showNumber st.propertyValue
                                         , E.onValueChange (E.input UpdatePropertyValue)
                                         ]
                               ]
@@ -60,7 +60,7 @@ ui = component render eval
                               , H.input [ P.id_ "monthlyRent"
                                         , P.type_ "text"
                                         , P.placeholder "Monthly Rent"
-                                        , P.value $ show st.monthlyRent
+                                        , P.value $ showNumber st.monthlyRent
                                         , E.onValueChange (E.input UpdateMonthlyRent)
                                         ]
                               ]
@@ -68,15 +68,19 @@ ui = component render eval
                               , H.input [ P.id_ "deposit"
                                         , P.type_ "text"
                                         , P.placeholder "Deposit"
-                                        , P.value $ show st.deposit
+                                        , P.value $ showNumber st.deposit
                                         , E.onValueChange (E.input UpdateDeposit)
                                         ]
                               ]
                       ]
-              , H.table_  [ H.tr_ [ H.td_ [H.text "Gross Yield"], H.td_ [ H.text (show $ calculateYield st) ] ]
-                          , H.tr_ [ H.td_ [H.text "Loan to Value"], H.td_ [ H.text (show $ calculateLTV st) ] ]
+              , H.table_  [ H.tr_ [ H.td_ [H.text "Gross Yield"], H.td_ [ H.text (showNumber $ calculateYield st) ] ]
+                          , H.tr_ [ H.td_ [H.text "Loan to Value"], H.td_ [ H.text (showNumber $ calculateLTV st) ] ]
                           ]
               ]
+
+    showNumber :: Maybe Number -> String
+    showNumber Nothing = ""
+    showNumber (Just n) = show n
 
     eval :: Eval Input State Input g
     eval (UpdateMonthlyRent rent next)    = modify (_ { monthlyRent = Just $ readFloat rent }) $> next
