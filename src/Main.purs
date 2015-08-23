@@ -9,30 +9,45 @@ import Control.Monad.Eff (Eff())
 import Control.Monad.Eff.Exception (throwException)
 
 import Data.Functor (($>))
+import Data.Maybe (Maybe(..))
 
 import Halogen
-import Halogen.Query.StateF (modify)
+import Halogen.Query.StateF (modify, gets)
 import Halogen.Util (appendToBody)
 import qualified Halogen.HTML as H
 import qualified Halogen.HTML.Properties as P
 import qualified Halogen.HTML.Events as E
 import qualified Halogen.HTML.Events.Forms as E
 
-type State = { propertyValue :: Number, deposit :: Number, monthlyRent :: Number, grossYield :: Number }
+type State = { monthlyRent :: Maybe Number, propertyValue :: Maybe Number, deposit :: Maybe Number, interestRate :: Maybe Number }
 
 initialState :: State
-initialState = { monthlyRent: 0.0, propertyValue: 0.0, deposit: 0.0, grossYield: 0.0 }
+initialState = { monthlyRent: Nothing, propertyValue: Nothing, deposit: Nothing, interestRate: Nothing }
 
-calculateYield :: Number -> Number -> Number
-calculateYield monthlyRent propertyValue = monthlyRent * 12.0 / propertyValue * 100.0
+calculateYield :: State -> Maybe Number
+calculateYield st = do
+  rent <- st.monthlyRent
+  propertyValue <- st.propertyValue
+  return $ rent * 12.0 / propertyValue * 100.0
 
-calculateLTV :: State -> Number
-calculateLTV st = (st.propertyValue - st.deposit) / st.propertyValue * 100.0
+calculateLTV :: State -> Maybe Number
+calculateLTV st = do
+  propertyValue <- st.propertyValue
+  deposit <- st.deposit
+  return $ (propertyValue - deposit) / propertyValue * 100.0
+
+calculateMonthlyMortgagePayment :: State -> Maybe Number
+calculateMonthlyMortgagePayment st = do
+  propertyValue <- st.propertyValue
+  interestRate <- st.interestRate
+  deposit <- st.deposit
+  return $ (propertyValue - deposit) * (interestRate / 100.0) / 12.0
 
 data Input a
   = UpdatePropertyValue String a
   | UpdateMonthlyRent String a
   | UpdateDeposit String a
+  | UpdateMortgageInterestRate String a
 
 ui :: forall g p. (Functor g) => Component State Input g p
 ui = component render eval
@@ -40,43 +55,55 @@ ui = component render eval
 
     render :: Render State Input p
     render st =
-      H.div_  [ H.h1_ [ H.text "Yield Calculator" ]
-              , H.p_  [ H.text "Property Value"
-                      , H.input [ P.type_ "text"
-                                , P.placeholder "Property Value"
-                                , P.value $ show st.propertyValue
-                                , E.onValueChange (E.input UpdatePropertyValue)
-                                ]
+      H.div_  [ H.h1_ [ H.text "Mortgage Calculator" ]
+              , H.ol_ [ H.li_ [ H.label [ P.for "propertyValue" ] [ H.text  "Property Value" ]
+                              , H.input [ P.id_ "propertyValue"
+                                        , P.type_ "text"
+                                        , P.placeholder "Property Price"
+                                        , P.value $ showNumber st.propertyValue
+                                        , E.onValueChange (E.input UpdatePropertyValue)
+                                        ]
+                              ]
+                      , H.li_ [ H.label [ P.for "monthlyRent" ][ H.text  "Rent (Monthly)" ]
+                              , H.input [ P.id_ "monthlyRent"
+                                        , P.type_ "text"
+                                        , P.placeholder "Monthly Rent"
+                                        , P.value $ showNumber st.monthlyRent
+                                        , E.onValueChange (E.input UpdateMonthlyRent)
+                                        ]
+                              ]
+                      , H.li_ [ H.label [ P.for "deposit" ] [ H.text  "Deposit" ]
+                              , H.input [ P.id_ "deposit"
+                                        , P.type_ "text"
+                                        , P.placeholder "Deposit"
+                                        , P.value $ showNumber st.deposit
+                                        , E.onValueChange (E.input UpdateDeposit)
+                                        ]
+                              ]
+                      , H.li_ [ H.label [ P.for "interestRate" ] [ H.text  "Mortgage Interest Rate" ]
+                              , H.input [ P.id_ "interestRate"
+                                        , P.type_ "text"
+                                        , P.placeholder "Mortgage Interest Rate"
+                                        , P.value $ showNumber st.interestRate
+                                        , E.onValueChange (E.input UpdateMortgageInterestRate)
+                                        ]
+                              ]
                       ]
-              , H.p_  [ H.text "Rent (monthly)"
-                      , H.input [ P.type_ "text"
-                                , P.placeholder "Monthly Rent"
-                                , P.value $ show st.monthlyRent
-                                , E.onValueChange (E.input UpdateMonthlyRent)
-                                ]
-                      ]
-              , H.p_  [ H.text "Deposit Amount"
-                      , H.input [ P.type_ "text"
-                                , P.placeholder "Deposit Amount"
-                                , P.value $ show st.deposit
-                                , E.onValueChange (E.input UpdateDeposit)
-                                ]
-                      ]
-              , H.ul_ [ H.li_ [ H.p_ [ H.text ("Gross Yield" ++ show st.grossYield) ] ]
-                      , H.li_ [ H.p_ [ H.text ("Loan To Value") ] ]
-                      ]
+              , H.table_  [ H.tr_ [ H.td_ [H.text "Gross Yield"], H.td_ [ H.text (showNumber $ calculateYield st) ] ]
+                          , H.tr_ [ H.td_ [H.text "Loan to Value"], H.td_ [ H.text (showNumber $ calculateLTV st) ] ]
+                          , H.tr_ [ H.td_ [H.text "Monthly Mortgage Payment"], H.td_ [ H.text (showNumber $ calculateMonthlyMortgagePayment st) ] ]
+                          ]
               ]
 
+    showNumber :: Maybe Number -> String
+    showNumber Nothing = ""
+    showNumber (Just n) = show n
+
     eval :: Eval Input State Input g
-    eval (UpdateMonthlyRent rent next) = 
-      modify (_ { monthlyRent: readFloat rent, grossYield: 0.0 })-- modify (\st -> { grossYield: calculateYield (readFloat rent) st.propertyValue }) $> next --(\st -> recalcWithRent st $ readFloat rent) $> next
-    eval (UpdatePropertyValue price next) = modify (\st -> recalcWithPrice st $ readFloat price) $> next
-
-    recalcWithRent :: State -> Number -> State
-    recalcWithRent st rent = { monthlyRent: rent, propertyValue: st.propertyValue,  grossYield: calculateYield rent st.propertyValue, deposit: 0.0 }
-
-    recalcWithPrice :: State -> Number -> State
-    recalcWithPrice st price = { monthlyRent: st.monthlyRent, propertyValue: price, grossYield: calculateYield st.monthlyRent price, deposit: 0.0 }
+    eval (UpdateMonthlyRent rent next)    = modify (_ { monthlyRent = Just $ readFloat rent }) $> next
+    eval (UpdatePropertyValue price next) = modify (_ { propertyValue = Just $ readFloat price }) $> next
+    eval (UpdateDeposit deposit next)     = modify (_ { deposit = Just $ readFloat deposit }) $> next
+    eval (UpdateMortgageInterestRate interestRate next) = modify (_ { interestRate = Just $ readFloat interestRate }) $> next
 
 main :: Eff (HalogenEffects ()) Unit
 main = runAff throwException (const (pure unit)) $ do
