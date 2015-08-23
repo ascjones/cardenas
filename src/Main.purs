@@ -9,6 +9,7 @@ import Control.Monad.Eff (Eff())
 import Control.Monad.Eff.Exception (throwException)
 
 import Data.Functor (($>))
+import Data.Maybe (Maybe(..))
 
 import Halogen
 import Halogen.Query.StateF (modify, gets)
@@ -18,16 +19,22 @@ import qualified Halogen.HTML.Properties as P
 import qualified Halogen.HTML.Events as E
 import qualified Halogen.HTML.Events.Forms as E
 
-type State = { monthlyRent :: Number, propertyPrice :: Number, deposit :: Number }
+type State = { monthlyRent :: Maybe Number, propertyValue :: Maybe Number, deposit :: Maybe Number }
 
 initialState :: State
-initialState = { monthlyRent: 0.0, propertyPrice: 0.0, deposit: 0.0 }
+initialState = { monthlyRent: Nothing, propertyValue: Nothing, deposit: Nothing }
 
-calculateYield :: State -> Number
-calculateYield st =  st.monthlyRent * 12.0 / st.propertyPrice * 100.0
+calculateYield :: State -> Maybe Number
+calculateYield st = do
+  rent <- st.monthlyRent
+  propertyValue <- st.propertyValue
+  return $ rent * 12.0 / propertyValue * 100.0
 
-calculateLTV :: State -> Number
-calculateLTV st = (st.propertyPrice - st.deposit) / st.propertyPrice * 100.0
+calculateLTV :: State -> Maybe Number
+calculateLTV st = do
+  propertyValue <- st.propertyValue
+  deposit <- st.deposit
+  return $ (propertyValue - deposit) / propertyValue * 100.0
 
 data Input a
   = UpdatePropertyValue String a
@@ -44,7 +51,7 @@ ui = component render eval
               , H.p_  [ H.text "Property Value"
                       , H.input [ P.type_ "text"
                                 , P.placeholder "Property Price"
-                                , P.value $ show st.propertyPrice
+                                , P.value $ show st.propertyValue
                                 , E.onValueChange (E.input UpdatePropertyValue)
                                 ]
                       ]
@@ -68,9 +75,9 @@ ui = component render eval
               ]
 
     eval :: Eval Input State Input g
-    eval (UpdateMonthlyRent rent next)    = modify (_ { monthlyRent = readFloat rent }) $> next
-    eval (UpdatePropertyValue price next) = modify (_ { propertyPrice = readFloat price }) $> next
-    eval (UpdateDeposit deposit next)     = modify (_ { deposit = readFloat deposit }) $> next
+    eval (UpdateMonthlyRent rent next)    = modify (_ { monthlyRent = Just $ readFloat rent }) $> next
+    eval (UpdatePropertyValue price next) = modify (_ { propertyValue = Just $ readFloat price }) $> next
+    eval (UpdateDeposit deposit next)     = modify (_ { deposit = Just $ readFloat deposit }) $> next
 
 main :: Eff (HalogenEffects ()) Unit
 main = runAff throwException (const (pure unit)) $ do
