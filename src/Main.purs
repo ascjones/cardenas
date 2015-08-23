@@ -48,26 +48,30 @@ ui = component render eval
     render :: Render State Input p
     render st =
       H.div_  [ H.h1_ [ H.text "Yield Calculator" ]
-              , H.p_  [ H.text "Property Value"
-                      , H.input [ P.type_ "text"
-                                , P.placeholder "Property Price"
-                                , P.value $ show st.propertyValue
-                                , E.onValueChange (E.input UpdatePropertyValue)
-                                ]
-                      ]
-              , H.p_  [ H.text "Rent (monthly)"
-                      , H.input [ P.type_ "text"
-                                , P.placeholder "Monthly Rent"
-                                , P.value $ show st.monthlyRent
-                                , E.onValueChange (E.input UpdateMonthlyRent)
-                                ]
-                      ]
-              , H.p_  [ H.text "Deposit"
-                      , H.input [ P.type_ "text"
-                                , P.placeholder "Deposit"
-                                , P.value $ show st.deposit
-                                , E.onValueChange (E.input UpdateDeposit)
-                                ]
+              , H.ol_ [ H.li_ [ H.label_ [ H.text  "Property Value" ]
+                              , H.input [ P.id_ "propertyValue"
+                                        , P.type_ "text"
+                                        , P.placeholder "Property Price"
+                                        , P.value $ show st.propertyValue
+                                        , E.onValueChange (E.input UpdatePropertyValue)
+                                        ]
+                              ]
+                      , H.li_ [ H.label_ [ H.text  "Rent (Monthly)" ]
+                              , H.input [ P.id_ "monthlyRent"
+                                        , P.type_ "text"
+                                        , P.placeholder "Monthly Rent"
+                                        , P.value $ show st.monthlyRent
+                                        , E.onValueChange (E.input UpdateMonthlyRent)
+                                        ]
+                              ]
+                      , H.li_ [ H.label_ [ H.text  "Deposit" ]
+                              , H.input [ P.id_ "deposit"
+                                        , P.type_ "text"
+                                        , P.placeholder "Deposit"
+                                        , P.value $ show st.deposit
+                                        , E.onValueChange (E.input UpdateDeposit)
+                                        ]
+                              ]
                       ]
               , H.table_  [ H.tr_ [ H.td_ [H.text "Gross Yield"], H.td_ [ H.text (show $ calculateYield st) ] ]
                           , H.tr_ [ H.td_ [H.text "Loan to Value"], H.td_ [ H.text (show $ calculateLTV st) ] ]
