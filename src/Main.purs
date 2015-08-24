@@ -19,16 +19,30 @@ import qualified Halogen.HTML.Properties as P
 import qualified Halogen.HTML.Events as E
 import qualified Halogen.HTML.Events.Forms as E
 
-type State = { monthlyRent :: Maybe Number, propertyValue :: Maybe Number, deposit :: Maybe Number, interestRate :: Maybe Number }
+type State =
+  { monthlyRent :: Maybe Number
+  , propertyValue :: Maybe Number
+  , deposit :: Maybe Number
+  , interestRate :: Maybe Number
+  , initialCosts :: Maybe Number }
 
 initialState :: State
-initialState = { monthlyRent: Nothing, propertyValue: Nothing, deposit: Nothing, interestRate: Nothing }
+initialState =
+  { monthlyRent: Nothing
+  , propertyValue: Nothing
+  , deposit: Nothing
+  , interestRate: Nothing
+  , initialCosts: Nothing }
 
 calculateYield :: State -> Maybe Number
 calculateYield st = do
   rent <- st.monthlyRent
   propertyValue <- st.propertyValue
-  return $ rent * 12.0 / propertyValue * 100.0
+  initialCosts <- st.initialCosts
+  return $ rent * 12.0 / (propertyValue + initialCosts) * 100.0 -- todo: check that initial costt included in yield
+
+calculateInitialInvestment :: State -> Maybe Number
+calculateInitialInvestment st = (+) <$> st.initialCosts <*> st.deposit
 
 calculateLTV :: State -> Maybe Number
 calculateLTV st = do
@@ -47,6 +61,7 @@ data Input a
   = UpdatePropertyValue String a
   | UpdateMonthlyRent String a
   | UpdateDeposit String a
+  | UpdateInitialCosts String a
   | UpdateMortgageInterestRate String a
 
 ui :: forall g p. (Functor g) => Component State Input g p
@@ -80,6 +95,14 @@ ui = component render eval
                                         , E.onValueChange (E.input UpdateDeposit)
                                         ]
                               ]
+                      , H.li_ [ H.label [ P.for "initialCosts" ] [ H.text  "Initial Costs" ]
+                              , H.input [ P.id_ "initialCosts"
+                                        , P.type_ "text"
+                                        , P.placeholder "Initial Costs"
+                                        , P.value $ showNumber st.initialCosts
+                                        , E.onValueChange (E.input UpdateInitialCosts)
+                                        ]
+                              ]
                       , H.li_ [ H.label [ P.for "interestRate" ] [ H.text  "Mortgage Interest Rate" ]
                               , H.input [ P.id_ "interestRate"
                                         , P.type_ "text"
@@ -103,6 +126,7 @@ ui = component render eval
     eval (UpdateMonthlyRent rent next)    = modify (_ { monthlyRent = Just $ readFloat rent }) $> next
     eval (UpdatePropertyValue price next) = modify (_ { propertyValue = Just $ readFloat price }) $> next
     eval (UpdateDeposit deposit next)     = modify (_ { deposit = Just $ readFloat deposit }) $> next
+    eval (UpdateInitialCosts initialCosts next)         = modify (_ { initialCosts = Just $ readFloat initialCosts }) $> next
     eval (UpdateMortgageInterestRate interestRate next) = modify (_ { interestRate = Just $ readFloat interestRate }) $> next
 
 main :: Eff (HalogenEffects ()) Unit
