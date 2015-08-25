@@ -24,7 +24,9 @@ type State =
   , propertyValue :: Maybe Number
   , deposit :: Maybe Number
   , interestRate :: Maybe Number
-  , initialCosts :: Maybe Number }
+  , initialCosts :: Maybe Number
+  , useAgency :: Boolean
+  }
 
 initialState :: State
 initialState =
@@ -32,14 +34,27 @@ initialState =
   , propertyValue: Nothing
   , deposit: Nothing
   , interestRate: Nothing
-  , initialCosts: Nothing }
+  , initialCosts: Nothing
+  , useAgency: false
+  }
 
-calculateYield :: State -> Maybe Number
-calculateYield st = do
+calculateYield :: Number -> Number -> Number -> Number
+calculateYield rent investment ongoingCosts =
+  rent * 12.0 - ongoingCosts / investment * 100.0
+
+calculateGrossYield :: State -> Maybe Number
+calculateGrossYield st = do
+  rent <- st.monthlyRent
+  propertyValue <- st.propertyValue
+  return $ calculateYield rent propertyValue 0.0
+
+calculateNetYield :: State -> Maybe Number
+calculateNetYield st = do
   rent <- st.monthlyRent
   propertyValue <- st.propertyValue
   initialCosts <- st.initialCosts
-  return $ rent * 12.0 / (propertyValue + initialCosts) * 100.0 -- todo: check that initial costt included in yield
+  let agencyCosts = if st.useAgency then rent * 0.15 else 0.0
+  return $ calculateYield rent (propertyValue + initialCosts) agencyCosts
 
 calculateInitialInvestment :: State -> Maybe Number
 calculateInitialInvestment st = (+) <$> st.initialCosts <*> st.deposit
@@ -63,6 +78,7 @@ data Input a
   | UpdateDeposit String a
   | UpdateInitialCosts String a
   | UpdateMortgageInterestRate String a
+  | ToggleUseAgency Boolean a
 
 ui :: forall g p. (Functor g) => Component State Input g p
 ui = component render eval
@@ -78,7 +94,7 @@ ui = component render eval
                                         , P.value $ showNumber st.propertyValue
                                         , E.onValueChange (E.input UpdatePropertyValue)
                                         ]
-                              ]
+                          ]
                       , H.li_ [ H.label [ P.for "monthlyRent" ][ H.text  "Rent (Monthly)" ]
                               , H.input [ P.id_ "monthlyRent"
                                         , P.type_ "text"
@@ -103,6 +119,14 @@ ui = component render eval
                                         , E.onValueChange (E.input UpdateInitialCosts)
                                         ]
                               ]
+                      , H.li_ [ H.label [ P.for "useAgency" ] [ H.text  "Agency Managed (15%)" ]
+                              , H.input [ P.id_ "useAgency"
+                                        , P.type_ "checkbox"
+                                        , P.title "Use Agency"
+                                        , P.checked st.useAgency
+                                        , E.onChecked (E.input ToggleUseAgency)
+                                        ]
+                              ]
                       , H.li_ [ H.label [ P.for "interestRate" ] [ H.text  "Mortgage Interest Rate" ]
                               , H.input [ P.id_ "interestRate"
                                         , P.type_ "text"
@@ -112,9 +136,10 @@ ui = component render eval
                                         ]
                               ]
                       ]
-              , H.table_  [ H.tr_ [ H.td_ [H.text "Gross Yield"], H.td_ [ H.text (showNumber $ calculateYield st) ] ]
+              , H.table_  [ H.tr_ [ H.td_ [H.text "Gross Yield"], H.td_ [ H.text (showNumber $ calculateGrossYield st) ] ]
                           , H.tr_ [ H.td_ [H.text "Loan to Value"], H.td_ [ H.text (showNumber $ calculateLTV st) ] ]
                           , H.tr_ [ H.td_ [H.text "Monthly Mortgage Payment"], H.td_ [ H.text (showNumber $ calculateMonthlyMortgagePayment st) ] ]
+                          , H.tr_ [ H.td_ [H.text "Net Yield"], H.td_ [ H.text (showNumber $ calculateNetYield st) ] ]
                           ]
               ]
 
@@ -123,11 +148,18 @@ ui = component render eval
     showNumber (Just n) = show n
 
     eval :: Eval Input State Input g
-    eval (UpdateMonthlyRent rent next)    = modify (_ { monthlyRent = Just $ readFloat rent }) $> next
-    eval (UpdatePropertyValue price next) = modify (_ { propertyValue = Just $ readFloat price }) $> next
-    eval (UpdateDeposit deposit next)     = modify (_ { deposit = Just $ readFloat deposit }) $> next
-    eval (UpdateInitialCosts initialCosts next)         = modify (_ { initialCosts = Just $ readFloat initialCosts }) $> next
-    eval (UpdateMortgageInterestRate interestRate next) = modify (_ { interestRate = Just $ readFloat interestRate }) $> next
+    eval (UpdateMonthlyRent rent next) =
+      modify (_ { monthlyRent = Just $ readFloat rent }) $> next
+    eval (UpdatePropertyValue price next) =
+      modify (_ { propertyValue = Just $ readFloat price }) $> next
+    eval (UpdateDeposit deposit next) =
+      modify (_ { deposit = Just $ readFloat deposit }) $> next
+    eval (UpdateInitialCosts initialCosts next) =
+      modify (_ { initialCosts = Just $ readFloat initialCosts }) $> next
+    eval (UpdateMortgageInterestRate interestRate next) =
+      modify (_ { interestRate = Just $ readFloat interestRate }) $> next
+    eval (ToggleUseAgency b next) =
+      modify (_ { useAgency = b }) $> next
 
 main :: Eff (HalogenEffects ()) Unit
 main = runAff throwException (const (pure unit)) $ do
