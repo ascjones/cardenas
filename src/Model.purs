@@ -24,7 +24,7 @@ initialState =
 
 calculateYield :: Number -> Number -> Number -> Number
 calculateYield rent investment ongoingCosts =
-  (rent * 12.0 - ongoingCosts / investment) * 100.0
+  (rent - ongoingCosts) * 12.0  / investment * 100.0
 
 calculateGrossYield :: State -> Maybe Number
 calculateGrossYield st = do
